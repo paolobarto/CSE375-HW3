@@ -19,13 +19,13 @@ tmp  := $(shell mkdir -p $(ODIR))
 # Basic compiler configuration and flags
 CXX      = g++
 CXXFLAGS = -MMD -ggdb -O3 -std=gnu++2a -m$(BITS)
-LDFLAGS	 = -m$(BITS) -lpthread -lrt 
+LDFLAGS	 = -m$(BITS) -lpthread
 
 # The basenames of the c++ files that this program uses
 CXXFILES = list list-sequential list-parallel list-transactional hw3
 
 # The executable we will build
-TARGET = $(ODIR)/hw2
+TARGET = $(ODIR)/hw3
 
 # Create the .o names from the CXXFILES
 OFILES = $(patsubst %, $(ODIR)/%.o, $(CXXFILES))
