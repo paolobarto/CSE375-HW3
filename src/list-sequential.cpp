@@ -5,19 +5,18 @@
 #include <vector>
 using namespace std;
 using std::vector;
-class SequentialList:List<int>
+class SequentialList: public List<int>
 {
     public:
     SequentialList(){
         this->N = 2;
-        this->LIMIT = 4;
         this->table = vector<vector<int>>(2, vector<int>(2));
     }
 
         std::vector<std::vector<int>> table;
     // Size per each table should be equal to N=2k
         // Since sequential do not need locks
-        bool contains(int x)
+        bool contains(int x) override
         {
             int index1 = hash1(x);
             int index2 = hash2(x);
@@ -26,7 +25,7 @@ class SequentialList:List<int>
             return false;
         }
 
-        bool add(int x)
+        bool add(int x) override
         {
             // cout<<"Adding "<<x<<endl;
             int index1 = hash1(x);
@@ -44,7 +43,7 @@ class SequentialList:List<int>
             return this->add(x);
         }
 
-        bool remove(int x)
+        bool remove(int x) override
         {
             int index1 = hash1(x);
             int index2 = hash2(x);
@@ -61,7 +60,7 @@ class SequentialList:List<int>
             return false;
         }
 
-        int size()
+        int size() override
         {
             int count = 0;
             for(int i=0; i<2; i++)
@@ -75,7 +74,7 @@ class SequentialList:List<int>
             return count;
         }
 
-        void populate(int x)
+        void populate(int x) override
         {
             for(int i=0;i<x;i++)
             {
@@ -96,7 +95,7 @@ class SequentialList:List<int>
             return temp;
         }
 
-        void resize()
+        void resize() override
         {
             // Resize the table to 2N
             //int new_table[2][2*this->N];
@@ -108,10 +107,9 @@ class SequentialList:List<int>
             }
             this->table = (*new_table);
             this->N = 2*this->N;
-            cout<<"New size: "<<this->N<<endl;
         }
 
-        void print()
+        void print() override
         {
         //printing of 2D array
         for(int i=0; i<2; i++)
