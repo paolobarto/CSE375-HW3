@@ -1,10 +1,11 @@
 #include <iostream>
 #include "list-sequential.cpp"
+#include "list-parallel.cpp"
 #include <chrono>
 #include <random>
 //#include "list.cpp"
-int VALUES = 100000;
-int OPERATIONS = 100000;
+int VALUES = 100;
+int OPERATIONS = 10;
 void profile(List<int>* list);
 int randomizer(int max);
 
@@ -16,9 +17,13 @@ int main()
     cout<<"Value limit: "<<VALUES<<"\n";
     cout<<"Operations: "<<OPERATIONS<<"\n";
 
-    SequentialList *seqList = new SequentialList();
-    cout<<"SequentialList\n";
-    profile(seqList);
+    // SequentialList *seqList = new SequentialList();
+    // cout<<"SequentialList\n";
+    // profile(seqList);
+
+    ParallelList *paraList = new ParallelList();
+    cout<<"ParallelList\n";
+    profile(paraList);
 
     return 0;
 }
@@ -26,6 +31,7 @@ int main()
 void profile(List<int>* list)
 {
     list->populate(VALUES);
+    list->print();
     auto started = std::chrono::high_resolution_clock::now();
     for(int i = 0; i < OPERATIONS; i++)
     {

@@ -1,4 +1,8 @@
 
+
+#ifndef LIST_H
+#define LIST_H
+
 template<class T> class List
 {
     public:
@@ -20,3 +24,4 @@ template<class T> class List
         virtual void resize();
 };
 
+#endif

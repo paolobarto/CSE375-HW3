@@ -22,7 +22,7 @@ CXXFLAGS = -MMD -ggdb -O3 -std=gnu++2a -m$(BITS)
 LDFLAGS	 = -m$(BITS) -lpthread
 
 # The basenames of the c++ files that this program uses
-CXXFILES = list list-sequential list-parallel list-transactional hw3
+CXXFILES =  list-sequential list-parallel list-transactional hw3
 
 # The executable we will build
 TARGET = $(ODIR)/hw3
