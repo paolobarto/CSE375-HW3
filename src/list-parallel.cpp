@@ -6,6 +6,7 @@
 #include <random>
 #include <algorithm>
 #include <iostream>
+#include <cmath>
 
 using namespace std;
 
@@ -19,7 +20,7 @@ public:
     std::vector<std::mutex> locks;
     int PROBE_SIZE = 4;
     int THRESHOLD = 2;
-    int LIMIT  = 10;
+    int LIMIT  = 40;
     ParallelList() : locks(2)
     {
         this->N  = 4;
@@ -29,17 +30,18 @@ public:
 
     bool add(int x) override
     {
-        cout<<"Adding "<<x<<endl;
+        //cout<<"Adding "<<x<<endl;
         int y = 0;
-        int index1 = hash1(x) % N;
-        int index2 = hash2(x) % N;
+        // Normally the hash function generates the hash then outside of the function we reference it. But we dont do that here
+        int index1 = hash1(x);
+        int index2 = hash2(x);
         int i = -1, h = -1;
         bool must_resize = false;
         if(contains(x))
             return false;
         acquire(x);
-        std::vector<int> table1List = this->table[0][hash1(x)];
-        std::vector<int> table2List = this->table[1][hash2(x)];
+        std::vector<int> table1List = this->table[0][index1];
+        std::vector<int> table2List = this->table[1][index2];
         // output table1
         int table1Size = 0;
         for(int i = 0; i < table1List.size(); i++)
@@ -53,44 +55,47 @@ public:
         //cout<<"Table2 size: "<<table2Size<<endl;
         if(table1Size < THRESHOLD){
             table1List[table1Size] = x;
-            this->table[0][hash1(x)] = table1List;
+            this->table[0][index1] = table1List;
             release(x);
-            print();
+            // print();
             return true;
         }
         else if(table2Size < THRESHOLD){
             table2List[table2Size] = x;
-            this->table[1][hash2(x)] = table2List;
+            this->table[1][index2] = table2List;
             release(x);
-            print();
+            // print();
             return true;
         }
         else if (table1Size < PROBE_SIZE){
             
-            cout << "Added to list 1 with resize needed. table1Size: " << table1Size << endl;
 
             table1List[table1Size] = x;
-            this->table[0][hash1(x)] = table1List;
-            y = table1List[0];
+            this->table[0][index1] = table1List;
+            //y = table1List[0];
             i = 0;
-            h = hash1(y);
-
-            cout << "i: " << i << " h: " << h << endl;
+            //h = hash1(y);
+            h = index1;
+            //cout << "Added to list 1 with relocate needed. table1Size: " << table1Size<<" Index: "<< h << endl;
+            //print();
+            // cout << "i: " << i << " h: " << h << endl;
         }
         else if (table2Size < PROBE_SIZE){
-            cout << "Table2 size: " << table2Size << endl;
 
             table2List[table2Size] = x;
-            this->table[1][hash2(x)] = table2List;
-            y = table2List[0];
+            this->table[1][index2] = table2List;
+            //y = table2List[0];
             i = 1;
-            h = hash2(y);
+            //h = hash2(y);
+            h = index2;
+            //cout << "Added to list 2 with relocate needed. table2size: " << table2Size <<" Index: "<< h << endl;
+           //print();
         }
         else{
             must_resize = true;
         }
         release(x);
-        print();
+        //print();
 
         if(must_resize){
             resize();
@@ -105,7 +110,6 @@ public:
     bool relocate(int i, int hi) {
         // i is the index of the table
         // hi is the hashed index of the value added to a list above threshold
-        cout<<"Relocating oldest value in table "<<i<<" at index "<<hi<<" N: "<<this->N<<endl;
 
         // What if relocation happens and the first value in the index moves to an empty list
 
@@ -114,26 +118,21 @@ public:
         int j = 1 - i;
         for(int round = 0; round < LIMIT; round++){
             // This is an empty list
+
+            //cout<<"Relocating oldest value in table "<<i<<" at index "<<hi<<" N: "<<this->N<<" Attempt: "<<round<<endl;
             std::vector<int> iList = this->table[i][hi];
             int iListSize = 0;
 
             // Finding size of populated list
             for(int k = 0; k < iList.size(); k++){
-                cout<<"k: "<<iList[k]<<endl;
+               // cout<<"k: "<<iList[k]<<endl;
                 if(iList[k] != 0)
                     iListSize++;
 
             }
             //print();
 
-            int y = iList[0];
-
-            // This should not be reached if successfully relocates number to empty list
-            // if(y==0){
-            //     cout<<"empty List operation not needed"<<endl;
-            //     continue;
-            // }
-            
+            int y = iList[0];           
 
             switch(i){
                 case 0:
@@ -144,19 +143,19 @@ public:
                     break;
             }
             acquire(y);
-            cout<<"Relocating "<<y<<" to table: "<<j<<" index: "<<hj<<endl;
+            //cout<<"Relocating "<<y<<" to table: "<<j<<" index: "<<hj<<endl;
             std::vector<int> jList = this->table[j][hj];
             int jListSize = 0;
             for(int i = 0; i < jList.size(); i++)
                 if(jList[i] != 0)
                     jListSize++;
-
+            
             if(remove(iList, y, i, hi)){ // remove an empty list
                 if(jListSize < THRESHOLD){
                     jList[jListSize] = y;
                     this->table[j][hj] = jList;
                     release(y);
-                    cout<<"Successfully relocated to list below threshold"<<endl;
+                    //cout<<"Successfully relocated to list below threshold"<<endl;
                     return true;
                 }
                 else if (jListSize < PROBE_SIZE) {
@@ -172,7 +171,7 @@ public:
                     iList[iListSize] = y;
                     this->table[i][hi] = iList;
                     release(y);
-                    cout << "Successfully relocated to list below threshold" << endl;
+                    //cout << "Successfully relocated to list below threshold" << endl;
                     return false;
                 }
             } else if(iListSize >= THRESHOLD){
@@ -214,11 +213,21 @@ public:
 
     bool remove(vector<int> tableIndex, int value, int i, int hi)
     {
+        //cout<<"Removing "<<value<<" from table "<<i<<" at index "<<hi<<endl;
         for(int j = 0; j < PROBE_SIZE; j++)
         {
             if(tableIndex[j] == value)
             {
-                tableIndex.erase(std::remove(tableIndex.begin(), tableIndex.end(), value), tableIndex.end());
+                tableIndex[j] = 0;
+                // shift original values back
+                for(int k = j; k < PROBE_SIZE-1; k++)
+                {
+                    if(tableIndex[k+1] == 0)
+                        break;
+                    tableIndex[k] = tableIndex[k+1];
+                    tableIndex[k+1] = 0;
+                }
+
                 this->table[i][hi] = tableIndex;
                 return true;
             }
@@ -262,6 +271,7 @@ public:
             cout<<"Table "<<i<<endl;
             for(int j=0; j<this->N; j++)
             {
+                //cout<<"Index "<<j<<": ";
                 for(int k=0; k<PROBE_SIZE; k++)
                 {
                     cout<<this->table[i][j][k]<<" ";
@@ -288,7 +298,8 @@ public:
 
     void resize() override
     {
-        cout<<"Resizing"<<endl;
+        for(auto &lock : this->locks)
+            lock.lock();
         std::vector<std::vector<std::vector<int>>> *newTable = new std::vector<std::vector<std::vector<int>>>(this->N*2, std::vector<std::vector<int>>(this->N*2, std::vector<int>(PROBE_SIZE, 0)));
 
         for(int i=0;i<this->N; i++)
@@ -300,6 +311,9 @@ public:
         this->table = (*newTable);
         this->N = 2*this->N;
         this->locks = std::vector<std::mutex>(2*this->N);
+        for(auto &lock : this->locks)
+            lock.unlock();
+        cout<<"Resized to "<<this->N<<endl;
     }
 
 
@@ -316,19 +330,30 @@ public:
         this->locks[this->N + hash2(x)].unlock();
     }
 
-    int hash1(int x)
-    {
-        return x % this->N; 
-        // if N = 4
-        // 0 1 2 3
+    // int hash1(int x)
+    // {
+    //     return x % this->N; 
+    //     // if N = 4
+    //     // 0 1 2 3
+    // }
+
+    // int hash2(int x)
+    // {
+    //     return 1 + (x % (this->N - 1));
+    //     // if N = 4 -> n-1 = 3
+    //     // 0 1 2
+    //     // 1 2 3
+    // }
+
+
+    int hash1(int key) {
+    const double A = 0.6180339887; // Fractional part of (√5 - 1) / 2
+    return static_cast<int>(std::floor(this->N * std::fmod(key * A, 1)));
     }
 
-    int hash2(int x)
-    {
-        return 1 + (x % (this->N - 1));
-        // if N = 4 -> n-1 = 3
-        // 0 1 2
-        // 1 2 3
+    int hash2(int key) {
+        const double A = 0.6180339887; // Fractional part of (√5 - 1) / 2
+        return static_cast<int>((this->N - 1) - std::floor(this->N * std::fmod(key * A, 1)));
     }
     
     int randomizer(int max)

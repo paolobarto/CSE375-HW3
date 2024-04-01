@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <iostream>
 #include <vector>
+#include <cmath>
 using namespace std;
 using std::vector;
 class SequentialList: public List<int>
@@ -123,14 +124,25 @@ class SequentialList: public List<int>
         }
         }
 
-        int hash1(int x)
-        {
-            return x % this->N;
-        }
+        // int hash1(int x)
+        // {
+        //     return x % this->N;
+        // }
 
-        int hash2(int x)
-        {
-            return 1 + (x % (this->N - 1));
-        }
+        // int hash2(int x)
+        // {
+        //     //return 1 + (x % (this->N - 1));
+        // return (x/this->N) % (this->N); // (x/4) % 3 = (0,1,2
 
+        // }
+
+            int hash1(int key) {
+    const double A = 0.6180339887; // Fractional part of (√5 - 1) / 2
+    return static_cast<int>(std::floor(this->N * std::fmod(key * A, 1)));
+    }
+
+    int hash2(int key) {
+        const double A = 0.6180339887; // Fractional part of (√5 - 1) / 2
+        return static_cast<int>((this->N - 1) - std::floor(this->N * std::fmod(key * A, 1)));
+    }
 };

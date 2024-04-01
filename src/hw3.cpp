@@ -3,10 +3,12 @@
 #include "list-parallel.cpp"
 #include <chrono>
 #include <random>
+#include <thread>
 //#include "list.cpp"
-int VALUES = 1000;
-int OPERATIONS = 10;
-void profile(List<int>* list);
+int VALUES = 100000;
+int OPERATIONS = 10000;
+int THREADS = 4;
+int profile(List<int>* list, int operations);
 int randomizer(int max);
 
 int main()
@@ -17,23 +19,36 @@ int main()
     cout<<"Value limit: "<<VALUES<<"\n";
     cout<<"Operations: "<<OPERATIONS<<"\n";
 
-    SequentialList *seqList = new SequentialList();
-    cout<<"SequentialList\n";
-    profile(seqList);
+    // SequentialList *seqList = new SequentialList();
+    // cout<<"SequentialList\n";
+    // seqList->populate(VALUES);
+    // profile(seqList, OPERATIONS);
 
     ParallelList *paraList = new ParallelList();
     cout<<"ParallelList\n";
-    profile(paraList);
+    //paraList->populate(VALUES);
+    // cout<<"Populated\n";
+    std::vector<std::thread> threads;
+    std::atomic<int> total_time(0); 
+
+    for(int i = 0; i < THREADS; i++)
+        threads.emplace_back(std::thread([&](){
+            total_time += profile(paraList, OPERATIONS/THREADS);
+            //paraList->populate(VALUES);
+        }));
+    
+    for (auto& thread : threads)
+        thread.join();
+
+    // cout<<"Total time: "<<total_time<<"\n";
 
     return 0;
 }
 
-void profile(List<int>* list)
+int profile(List<int>* list, int operations)
 {
-    list->populate(VALUES);
-    list->print();
     auto started = std::chrono::high_resolution_clock::now();
-    for(int i = 0; i < OPERATIONS; i++)
+    for(int i = 0; i < operations; i++)
     {
         int chance = randomizer(10);
         if (chance==1)
@@ -50,8 +65,9 @@ void profile(List<int>* list)
         }
        
     }
-
-    cout<<std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - started).count()<<"\n";
+    time_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - started).count();
+    cout<<elapsed<<"\n";
+    return elapsed;
 }
 
 int randomizer(int max)
