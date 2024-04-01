@@ -4,7 +4,7 @@
 #include <chrono>
 #include <random>
 //#include "list.cpp"
-int VALUES = 100;
+int VALUES = 1000;
 int OPERATIONS = 10;
 void profile(List<int>* list);
 int randomizer(int max);
@@ -17,9 +17,9 @@ int main()
     cout<<"Value limit: "<<VALUES<<"\n";
     cout<<"Operations: "<<OPERATIONS<<"\n";
 
-    // SequentialList *seqList = new SequentialList();
-    // cout<<"SequentialList\n";
-    // profile(seqList);
+    SequentialList *seqList = new SequentialList();
+    cout<<"SequentialList\n";
+    profile(seqList);
 
     ParallelList *paraList = new ParallelList();
     cout<<"ParallelList\n";

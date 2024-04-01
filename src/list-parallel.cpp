@@ -22,17 +22,8 @@ public:
     int LIMIT  = 10;
     ParallelList() : locks(2)
     {
-        //this->N = 4;
         this->N  = 4;
         this->locks = std::vector<std::mutex>(2*N);
-        // this->locks = std::vector<std::vector<std::mutex>>(2);
-        // std::vector<std::mutex> list1 = std::vector<std::mutex>(size);
-        // std::vector<std::mutex> list2 = std::vector<std::mutex>(size);
-
-        // this->locks[0] = list1;
-        // this->locks[1] = list2;
-
-
         this->table = std::vector<std::vector<std::vector<int>>>(4, std::vector<std::vector<int>>(4, std::vector<int>(PROBE_SIZE, 0)));
     }
 
@@ -58,38 +49,48 @@ public:
         for(int i = 0; i < table2List.size(); i++)
            if(table2List[i] != 0)
                table2Size++;
-        cout<<"Table1 size: "<<table1Size<<endl;
-        cout<<"Table2 size: "<<table2Size<<endl;
+        //cout<<"Table1 size: "<<table1Size<<endl;
+        //cout<<"Table2 size: "<<table2Size<<endl;
         if(table1Size < THRESHOLD){
             table1List[table1Size] = x;
             this->table[0][hash1(x)] = table1List;
             release(x);
+            print();
             return true;
         }
         else if(table2Size < THRESHOLD){
             table2List[table2Size] = x;
             this->table[1][hash2(x)] = table2List;
             release(x);
+            print();
             return true;
         }
         else if (table1Size < PROBE_SIZE){
+            
+            cout << "Added to list 1 with resize needed. table1Size: " << table1Size << endl;
+
             table1List[table1Size] = x;
             this->table[0][hash1(x)] = table1List;
             y = table1List[0];
             i = 0;
-            h = hash2(y);
+            h = hash1(y);
+
+            cout << "i: " << i << " h: " << h << endl;
         }
         else if (table2Size < PROBE_SIZE){
+            cout << "Table2 size: " << table2Size << endl;
+
             table2List[table2Size] = x;
             this->table[1][hash2(x)] = table2List;
             y = table2List[0];
             i = 1;
-            h = hash1(y);
+            h = hash2(y);
         }
         else{
             must_resize = true;
         }
         release(x);
+        print();
 
         if(must_resize){
             resize();
@@ -102,16 +103,38 @@ public:
     }
 
     bool relocate(int i, int hi) {
+        // i is the index of the table
+        // hi is the hashed index of the value added to a list above threshold
+        cout<<"Relocating oldest value in table "<<i<<" at index "<<hi<<" N: "<<this->N<<endl;
+
+        // What if relocation happens and the first value in the index moves to an empty list
+
+        // I want to resize the oldest value
         int hj = 0;
         int j = 1 - i;
         for(int round = 0; round < LIMIT; round++){
+            // This is an empty list
             std::vector<int> iList = this->table[i][hi];
             int iListSize = 0;
-            for(int k = 0; k < iList.size(); k++)
+
+            // Finding size of populated list
+            for(int k = 0; k < iList.size(); k++){
+                cout<<"k: "<<iList[k]<<endl;
                 if(iList[k] != 0)
                     iListSize++;
 
+            }
+            //print();
+
             int y = iList[0];
+
+            // This should not be reached if successfully relocates number to empty list
+            // if(y==0){
+            //     cout<<"empty List operation not needed"<<endl;
+            //     continue;
+            // }
+            
+
             switch(i){
                 case 0:
                     hj = hash2(y);
@@ -121,18 +144,19 @@ public:
                     break;
             }
             acquire(y);
-            cout<<"Relocating "<<y<<endl;
+            cout<<"Relocating "<<y<<" to table: "<<j<<" index: "<<hj<<endl;
             std::vector<int> jList = this->table[j][hj];
             int jListSize = 0;
             for(int i = 0; i < jList.size(); i++)
                 if(jList[i] != 0)
                     jListSize++;
 
-            if(remove(iList, y, j, hj)){
+            if(remove(iList, y, i, hi)){ // remove an empty list
                 if(jListSize < THRESHOLD){
                     jList[jListSize] = y;
                     this->table[j][hj] = jList;
                     release(y);
+                    cout<<"Successfully relocated to list below threshold"<<endl;
                     return true;
                 }
                 else if (jListSize < PROBE_SIZE) {
@@ -144,8 +168,11 @@ public:
                     release(y);
                 }
                 else{
-                    iList.push_back(y);
+                    //iList.push_back(y);
+                    iList[iListSize] = y;
+                    this->table[i][hi] = iList;
                     release(y);
+                    cout << "Successfully relocated to list below threshold" << endl;
                     return false;
                 }
             } else if(iListSize >= THRESHOLD){
@@ -185,14 +212,14 @@ public:
         return false;
     }
 
-    bool remove(vector<int> tableIndex,int value, int j, int hj)
+    bool remove(vector<int> tableIndex, int value, int i, int hi)
     {
-        for(int i = 0; i < PROBE_SIZE; i++)
+        for(int j = 0; j < PROBE_SIZE; j++)
         {
-            if(tableIndex[i] == value)
+            if(tableIndex[j] == value)
             {
                 tableIndex.erase(std::remove(tableIndex.begin(), tableIndex.end(), value), tableIndex.end());
-                this->table[j][hj] = tableIndex;
+                this->table[i][hi] = tableIndex;
                 return true;
             }
         }
