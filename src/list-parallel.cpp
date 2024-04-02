@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <iostream>
 #include <cmath>
+#include <thread>
+#include <shared_mutex>
 
 using namespace std;
 
@@ -18,6 +20,7 @@ public:
     //int N;
     std::vector<std::vector<std::vector<int>>> table;
     std::vector<std::mutex> locks;
+    std::shared_mutex resize_lock;
     int PROBE_SIZE = 4;
     int THRESHOLD = 2;
     int LIMIT  = 40;
@@ -30,7 +33,7 @@ public:
 
     bool add(int x) override
     {
-        //cout<<"Adding "<<x<<endl;
+       // cout<<"Adding "<<x<<" Thread Id: "<<std::this_thread::get_id()<<endl;
         int y = 0;
         // Normally the hash function generates the hash then outside of the function we reference it. But we dont do that here
         int index1 = hash1(x);
@@ -56,20 +59,20 @@ public:
         if(table1Size < THRESHOLD){
             table1List[table1Size] = x;
             this->table[0][index1] = table1List;
+            //cout<<"Added to list 1 below threshold"<<endl;
             release(x);
-            // print();
+             //print();
             return true;
         }
         else if(table2Size < THRESHOLD){
             table2List[table2Size] = x;
             this->table[1][index2] = table2List;
+            //cout<<"Added to list 2 below threshold"<<endl;
             release(x);
-            // print();
+             //print();
             return true;
         }
         else if (table1Size < PROBE_SIZE){
-            
-
             table1List[table1Size] = x;
             this->table[0][index1] = table1List;
             //y = table1List[0];
@@ -119,7 +122,7 @@ public:
         for(int round = 0; round < LIMIT; round++){
             // This is an empty list
 
-            //cout<<"Relocating oldest value in table "<<i<<" at index "<<hi<<" N: "<<this->N<<" Attempt: "<<round<<endl;
+           // cout<<"Relocating oldest value in table "<<i<<" at index "<<hi<<" N: "<<this->N<<" Attempt: "<<round<<" Thread Id:"<<std::this_thread::get_id()<<endl;
             std::vector<int> iList = this->table[i][hi];
             int iListSize = 0;
 
@@ -142,7 +145,10 @@ public:
                     hj = hash1(y);
                     break;
             }
+            //cout<<"Acquiring lock for: "<<y<<" Thread Id: "<<std::this_thread::get_id()<<endl;
             acquire(y);
+            //cout << "Acquired lock for: " << y << " Thread Id: " << std::this_thread::get_id() << endl;
+
             //cout<<"Relocating "<<y<<" to table: "<<j<<" index: "<<hj<<endl;
             std::vector<int> jList = this->table[j][hj];
             int jListSize = 0;
@@ -155,7 +161,7 @@ public:
                     jList[jListSize] = y;
                     this->table[j][hj] = jList;
                     release(y);
-                    //cout<<"Successfully relocated to list below threshold"<<endl;
+                    //cout<<"Successfully relocated to opposite list below threshold"<<endl;
                     return true;
                 }
                 else if (jListSize < PROBE_SIZE) {
@@ -164,6 +170,8 @@ public:
                     i = 1-i;
                     hi = hj;
                     j = 1-j;
+                    //cout<<"Successfully relocated to opposite list above threshold"<<endl;
+
                     release(y);
                 }
                 else{
@@ -171,7 +179,7 @@ public:
                     iList[iListSize] = y;
                     this->table[i][hi] = iList;
                     release(y);
-                    //cout << "Successfully relocated to list below threshold" << endl;
+                    //cout << "place the item back into the list" << endl;
                     return false;
                 }
             } else if(iListSize >= THRESHOLD){
@@ -183,29 +191,56 @@ public:
                 return true;
             }
         }
-
         return false;
 
     }
 
     bool remove(int x) override
     {
+
         acquire(x);
         std::vector<int> table1List = this->table[0][hash1(x)];
         if(contains(table1List, x))
         {
-            table1List.erase(std::remove_if(table1List.begin(), table1List.end(), [&](int var){return var==x; }), table1List.end());
-            this->table[0][hash1(x)] = table1List;
-            release(x);
-            return true;
+            for(int j=0; j<PROBE_SIZE; j++)
+            {
+                if(table1List[j]==x){
+                    table1List[j]=0;
+                    for (int k = j; k < PROBE_SIZE - 1; k++)
+                    {
+                        if (table1List[k + 1] == 0)
+                            break;
+                        table1List[k] = table1List[k + 1];
+                        table1List[k + 1] = 0;
+                    }
+                    this->table[0][hash1(x)] = table1List;
+                    release(x);
+                    return true;
+                }
+            }
+            // shift original values back
         }
         std::vector<int> table2List = this->table[1][hash2(x)];
         if(contains(table2List, x))
         {
-            table2List.erase(std::remove(table2List.begin(), table2List.end(), x), table2List.end());
-            this->table[1][hash2(x)] = table2List;
-            release(x);
-            return true;
+
+            for (int j = 0; j < PROBE_SIZE; j++)
+            {
+                if (table2List[j] == x)
+                {
+                    table2List[j] = 0;
+                    for (int k = j; k < PROBE_SIZE - 1; k++)
+                    {
+                        if (table2List[k + 1] == 0)
+                            break;
+                        table2List[k] = table2List[k + 1];
+                        table2List[k + 1] = 0;
+                    }
+                    this->table[1][hash2(x)] = table2List;
+                    release(x);
+                    return true;
+                }
+            }
         }
         release(x);
         return false;
@@ -297,23 +332,68 @@ public:
         }
     }
 
+    void populate_parallel(int upper_limit, int thread_count)
+    {
+        //create threads
+        std::vector<std::thread> threads;
+        for (int i = 0; i < thread_count; i++)
+        {
+            threads.emplace_back(std::thread([&](int i) {
+                for (int j = i; j < upper_limit; j += thread_count)
+                {   
+                    //cout<<"Thread Id: "<<std::this_thread::get_id()<<" Adding: "<<j<<endl;
+                    this->add(j);
+                }
+                cout<<"THREAD COMPLETE: "<<std::this_thread::get_id()<<endl;
+            }, i));
+        }
+
+        //join threads
+        cout<<"Thread Count: "<<threads.size()<<endl;
+        for (std::thread &thread : threads){
+            cout<<"Waiting for: "<<thread.get_id()<<endl;
+            thread.join();
+        }
+    }
+
     void resize() override
     {
-        for(auto &lock : this->locks)
-            lock.lock();
+        // cout << "acquiring resize locks"
+        //      << " Thread Id: " << std::this_thread::get_id()<<endl;
+        this->resize_lock.lock();
+        int oldN = this->N;
+        for(int i = 0; i < oldN; i++){
+            this->locks[i].lock();
+            this->locks[this->N + i].lock();
+        }
+        // cout << "acquired locks"
+        //      << " Thread Id: " << std::this_thread::get_id() << endl;
+
         std::vector<std::vector<std::vector<int>>> *newTable = new std::vector<std::vector<std::vector<int>>>(this->N*2, std::vector<std::vector<int>>(this->N*2, std::vector<int>(PROBE_SIZE, 0)));
 
         for(int i=0;i<this->N; i++)
-        {
+        {//TODO 
             (*newTable)[0][i] = this->table[0][i];
             (*newTable)[1][i] = this->table[1][i];
         }
 
+
+
         this->table = (*newTable);
         this->N = 2*this->N;
+
+        for(int i = 0; i < oldN; i++){
+            this->locks[i].unlock();
+            this->locks[this->N + i].unlock();
+        }
         this->locks = std::vector<std::mutex>(2*this->N);
-        for(auto &lock : this->locks)
-            lock.unlock();
+        this->resize_lock.unlock();
+
+        // cout << "releasing locks"
+        //      << " Thread Id: " << std::this_thread::get_id() << endl;
+        
+        
+
         cout<<"Resized to "<<this->N<<endl;
     }
 
@@ -321,12 +401,14 @@ public:
 
     void acquire(int x)
     {
+        this->resize_lock.lock_shared();
         this->locks[hash1(x)].lock();
         this->locks[this->N + hash2(x)].lock();
     }
 
     void release(int x)
     {
+        this->resize_lock.unlock_shared();
         this->locks[hash1(x)].unlock();
         this->locks[this->N + hash2(x)].unlock();
     }

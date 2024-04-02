@@ -5,9 +5,9 @@
 #include <random>
 #include <thread>
 //#include "list.cpp"
-int VALUES = 500;
-int OPERATIONS = 10000;
-int THREADS = 4;
+int VALUES = 200000;
+int OPERATIONS = 0;
+int THREADS = 8;
 int profile(List<int>* list, int operations);
 int randomizer(int max);
 
@@ -20,27 +20,33 @@ int main()
     cout<<"Operations: "<<OPERATIONS<<"\n";
 
     // SequentialList *seqList = new SequentialList();
-    // cout<<"SequentialList\n";
+    // //cout<<"SequentialList\n";
     // seqList->populate(VALUES);
-    // profile(seqList, OPERATIONS);
+    // int s_time = profile(seqList, OPERATIONS);
+    // cout<<"Sequential Time: "<<s_time<<endl;
 
     ParallelList *paraList = new ParallelList();
-    cout<<"ParallelList\n";
-    paraList->populate(VALUES);
-    // cout<<"Populated\n";
+    //cout<<"ParallelList\n";
+    //paraList->populate(VALUES);
+    paraList->populate_parallel(VALUES, THREADS);
+    cout<<"Populated\n";
     std::vector<std::thread> threads;
-    std::atomic<int> total_time(0); 
+    std::atomic<int> max_time(0); 
 
     for(int i = 0; i < THREADS; i++)
         threads.emplace_back(std::thread([&](){
-            total_time += profile(paraList, OPERATIONS/THREADS);
+            int time = profile(paraList, OPERATIONS/THREADS);
             //paraList->populate(VALUES);
+            int curr_max = max_time.load();
+            while (time > curr_max && !max_time.compare_exchange_weak(curr_max, time))
+            {
+            }
         }));
     
     for (auto& thread : threads)
         thread.join();
 
-    // cout<<"Total time: "<<total_time<<"\n";
+    cout<<"Parallel time: "<<max_time<<"\n";
 
     return 0;
 }
@@ -66,7 +72,7 @@ int profile(List<int>* list, int operations)
        
     }
     time_t elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::high_resolution_clock::now() - started).count();
-    cout<<elapsed<<"\n";
+    //cout<<elapsed<<"\n";
     return elapsed;
 }
 
