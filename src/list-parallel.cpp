@@ -292,7 +292,8 @@ public:
     {
         for (int i = 0; i < x; i++)
         {
-            this->add(rand() % x + 1);
+            //this->add(rand() % x + 1);
+            this->add(i);
         }
     }
 

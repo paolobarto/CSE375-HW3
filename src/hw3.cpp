@@ -5,7 +5,7 @@
 #include <random>
 #include <thread>
 //#include "list.cpp"
-int VALUES = 100000;
+int VALUES = 500;
 int OPERATIONS = 10000;
 int THREADS = 4;
 int profile(List<int>* list, int operations);
@@ -26,7 +26,7 @@ int main()
 
     ParallelList *paraList = new ParallelList();
     cout<<"ParallelList\n";
-    //paraList->populate(VALUES);
+    paraList->populate(VALUES);
     // cout<<"Populated\n";
     std::vector<std::thread> threads;
     std::atomic<int> total_time(0); 
