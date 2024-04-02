@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <stdio.h>
 using namespace std;
 using std::vector;
 class TransactionalList: public List<int>
@@ -16,7 +17,7 @@ class TransactionalList: public List<int>
     }
 
         std::vector<std::vector<int>> table;
-    // Size per each table should be equal to N=2k
+        // Size per each table should be equal to N=2k
         // Since sequential do not need locks
         bool contains(int x) override
         {
@@ -101,16 +102,18 @@ class TransactionalList: public List<int>
         {
             // Resize the table to 2N
             //int new_table[2][2*this->N];
-            
-            vector<vector<int>>* new_table = new vector<vector<int>>(2, vector<int>(2*this->N));
-            for(int i=0; i<this->N; i++)
-            {
-                (*new_table)[0][i] = this->table[0][i];
-                (*new_table)[1][i] = this->table[1][i];
+            __transaction_atomic {
+
+                vector<vector<int>>* new_table = new vector<vector<int>>(2, vector<int>(2*this->N));
+                for(int i=0; i<this->N; i++)
+                {
+                    (*new_table)[0][i] = this->table[0][i];
+                    (*new_table)[1][i] = this->table[1][i];
+                }
+                this->table = (*new_table);
+                delete new_table;
+                this->N = 2*this->N;
             }
-            this->table = (*new_table);
-            delete new_table;
-            this->N = 2*this->N;
             //cout<<"resized to: "<<this->N<<endl;
         }
 
