@@ -9,6 +9,7 @@ using std::vector;
 class SequentialList: public List<int>
 {
     public:
+    int LIMIT=40;
     SequentialList(){
         this->N = 2;
         this->table = vector<vector<int>>(2, vector<int>(2));
@@ -33,12 +34,12 @@ class SequentialList: public List<int>
             int index2 = hash2(x);
             if(contains(x))
                 return false;
-
-            if((x = swap(0, 0, x)) == 0)
-                return true;
-            if((x = swap(1, 1, x)) == 0)
-                return true;
-    
+            for(int i=0; i<LIMIT;i++){
+                if((x = swap(0, 0, x)) == 0)
+                    return true;
+                if((x = swap(1, 1, x)) == 0)
+                    return true;
+            }
             // If both tables are full. Resize
             resize();
             return this->add(x);
@@ -107,7 +108,9 @@ class SequentialList: public List<int>
                 (*new_table)[1][i] = this->table[1][i];
             }
             this->table = (*new_table);
+            delete new_table;
             this->N = 2*this->N;
+            //cout<<"resized to: "<<this->N<<endl;
         }
 
         void print() override
@@ -136,9 +139,9 @@ class SequentialList: public List<int>
 
         // }
 
-            int hash1(int key) {
-    const double A = 0.6180339887; // Fractional part of (√5 - 1) / 2
-    return static_cast<int>(std::floor(this->N * std::fmod(key * A, 1)));
+    int hash1(int key) {
+        const double A = 0.6180339887; // Fractional part of (√5 - 1) / 2
+        return static_cast<int>(std::floor(this->N * std::fmod(key * A, 1)));
     }
 
     int hash2(int key) {

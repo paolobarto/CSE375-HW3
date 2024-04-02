@@ -22,14 +22,16 @@ int main()
     SequentialList *seqList = new SequentialList();
     //cout<<"SequentialList\n";
     seqList->populate(VALUES);
+    cout<<"Sequential populated with "<<seqList->size()<<" values"<<endl;
     int s_time = profile(seqList, OPERATIONS);
     cout<<"Sequential Time: "<<s_time<<endl;
 
     ParallelList *paraList = new ParallelList();
-    //cout<<"ParallelList\n";
+    cout<<"ParallelList\n";
     //paraList->populate(VALUES);
+
     paraList->populate_parallel(VALUES, THREADS);
-    cout<<"Populated\n";
+    cout<<"Populated with "<<paraList->size()<<" values"<<endl;
     std::vector<std::thread> threads;
     std::atomic<int> max_time(0); 
 
@@ -56,6 +58,9 @@ int profile(List<int>* list, int operations)
     auto started = std::chrono::high_resolution_clock::now();
     for(int i = 0; i < operations; i++)
     {
+        // if(i%100000==0)
+        //     cout<<"i: "<<i<<" size: "<<list->size()<<endl;
+
         int chance = randomizer(10);
         if (chance==1)
         {

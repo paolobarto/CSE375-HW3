@@ -305,7 +305,7 @@ public:
 
     void print() override
     {
-        cout<<"this should be 2: "<< this->table.size()<<endl;
+        //cout<<"this should be 2: "<< this->table.size()<<endl;
         for(int i=0; i<2; i++)
         {
             cout<<"Table "<<i<<endl;
@@ -324,7 +324,15 @@ public:
 
     int size() override
     {
-        return 0;
+        this->resize_lock.lock();
+        int total = 0;
+        for(int i=0; i<2;i++)
+            for(int j=0; j<this->N;j++)
+                for(int k=0; k<PROBE_SIZE;k++)
+                    if(this->table[i][j][k]!=0)
+                        total+=1;
+        this->resize_lock.unlock();
+        return total;   
     }
 
     // rand is not thread safe, but this should only be called on a single thread
