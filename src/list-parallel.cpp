@@ -344,14 +344,14 @@ public:
                     //cout<<"Thread Id: "<<std::this_thread::get_id()<<" Adding: "<<j<<endl;
                     this->add(j);
                 }
-                cout<<"THREAD COMPLETE: "<<std::this_thread::get_id()<<endl;
+               // cout<<"THREAD COMPLETE: "<<std::this_thread::get_id()<<endl;
             }, i));
         }
 
         //join threads
         cout<<"Thread Count: "<<threads.size()<<endl;
         for (std::thread &thread : threads){
-            cout<<"Waiting for: "<<thread.get_id()<<endl;
+            //cout<<"Waiting for: "<<thread.get_id()<<endl;
             thread.join();
         }
     }
