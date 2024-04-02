@@ -23,12 +23,12 @@ public:
     std::shared_mutex resize_lock;
     int PROBE_SIZE = 4;
     int THRESHOLD = 2;
-    int LIMIT  = 40;
+    int LIMIT  = 20;
     ParallelList() : locks(2)
     {
         this->N  = 4;
         this->locks = std::vector<std::mutex>(2*N);
-        this->table = std::vector<std::vector<std::vector<int>>>(4, std::vector<std::vector<int>>(4, std::vector<int>(PROBE_SIZE, 0)));
+        this->table = std::vector<std::vector<std::vector<int>>>(2, std::vector<std::vector<int>>(this->N, std::vector<int>(PROBE_SIZE, 0)));
     }
 
     bool add(int x) override
@@ -122,7 +122,7 @@ public:
         for(int round = 0; round < LIMIT; round++){
             // This is an empty list
 
-           // cout<<"Relocating oldest value in table "<<i<<" at index "<<hi<<" N: "<<this->N<<" Attempt: "<<round<<" Thread Id:"<<std::this_thread::get_id()<<endl;
+            //cout<<"Relocating oldest value in table "<<i<<" at index "<<hi<<" N: "<<this->N<<" Attempt: "<<round<<" Thread Id:"<<std::this_thread::get_id()<<endl;
             std::vector<int> iList = this->table[i][hi];
             int iListSize = 0;
 
@@ -249,20 +249,21 @@ public:
     bool remove(vector<int> tableIndex, int value, int i, int hi)
     {
         //cout<<"Removing "<<value<<" from table "<<i<<" at index "<<hi<<endl;
+
         for(int j = 0; j < PROBE_SIZE; j++)
         {
             if(tableIndex[j] == value)
             {
                 tableIndex[j] = 0;
+
                 // shift original values back
-                for(int k = j; k < PROBE_SIZE-1; k++)
+                for(int k = j; k < 3; k++)
                 {
                     if(tableIndex[k+1] == 0)
                         break;
                     tableIndex[k] = tableIndex[k+1];
                     tableIndex[k+1] = 0;
                 }
-
                 this->table[i][hi] = tableIndex;
                 return true;
             }
@@ -273,7 +274,10 @@ public:
     bool contains(int x) override
     {
         acquire(x);
+        //print();
+        //cout<<"hash1: "<<hash1(x)<<endl;
         std::vector<int> table1List = this->table[0][hash1(x)];
+        //cout<<"this"<<endl;
         if(contains(table1List, x))
         {
             release(x);
@@ -301,12 +305,13 @@ public:
 
     void print() override
     {
+        cout<<"this should be 2: "<< this->table.size()<<endl;
         for(int i=0; i<2; i++)
         {
             cout<<"Table "<<i<<endl;
             for(int j=0; j<this->N; j++)
             {
-                //cout<<"Index "<<j<<": ";
+                cout<<"Index "<<j<<": ";
                 for(int k=0; k<PROBE_SIZE; k++)
                 {
                     cout<<this->table[i][j][k]<<" ";
@@ -349,7 +354,7 @@ public:
         }
 
         //join threads
-        cout<<"Thread Count: "<<threads.size()<<endl;
+        //cout<<"Thread Count: "<<threads.size()<<endl;
         for (std::thread &thread : threads){
             //cout<<"Waiting for: "<<thread.get_id()<<endl;
             thread.join();
@@ -369,38 +374,65 @@ public:
         // cout << "acquired locks"
         //      << " Thread Id: " << std::this_thread::get_id() << endl;
 
-        std::vector<std::vector<std::vector<int>>> *newTable = new std::vector<std::vector<std::vector<int>>>(this->N*2, std::vector<std::vector<int>>(this->N*2, std::vector<int>(PROBE_SIZE, 0)));
+        // std::vector<std::vector<std::vector<int>>> *newTable = new std::vector<std::vector<std::vector<int>>>(this->N*2, std::vector<std::vector<int>>(this->N*2, std::vector<int>(PROBE_SIZE, 0)));
+        // for(int i=0;i<this->N; i++)
+        // {//TODO 
+        //     (*newTable)[0][i] = this->table[0][i];
+        //     (*newTable)[1][i] = this->table[1][i];
+        // }
 
-        for(int i=0;i<this->N; i++)
-        {//TODO 
-            (*newTable)[0][i] = this->table[0][i];
-            (*newTable)[1][i] = this->table[1][i];
+
+
+        // // this->table = (*newTable);
+        std::vector<std::vector<std::vector<int>>> *newTable = new std::vector<std::vector<std::vector<int>>>(2, std::vector<std::vector<int>>(this->N*2, std::vector<int>(PROBE_SIZE, 0)));
+
+        // Copy elements from this->table to newTable
+        for(int i = 0; i < 2; i++) {
+            for(int j = 0; j < this->N; j++) {
+                for(int k = 0; k < PROBE_SIZE; k++) {
+                    (*newTable)[i][j][k] = this->table[i][j][k];
+                    (*newTable)[i][j][k] = this->table[i][j][k];
+                }
+            }
         }
 
 
+        
 
-        this->table = (*newTable);
-        this->N = 2*this->N;
 
+
+        // Deallocate memory for this->table if necessary
+        // (Assuming this->table was previously dynamically allocated)
+        //delete this->table;
+
+        // Assign newTable to this->table
+        this->table = *newTable;
+        // Deallocate memory for newTable since we no longer need it
+        delete newTable;
+        this->N = 2 * this->N;
+
+        
         for(int i = 0; i < oldN; i++){
+            
             this->locks[i].unlock();
-            this->locks[this->N + i].unlock();
+            this->locks[oldN + i].unlock();
         }
-        this->locks = std::vector<std::mutex>(2*this->N);
-        this->resize_lock.unlock();
 
         // cout << "releasing locks"
         //      << " Thread Id: " << std::this_thread::get_id() << endl;
-        
-        
 
-        cout<<"Resized to "<<this->N<<endl;
+        this->locks = std::vector<std::mutex>(2*this->N);
+        //cout<<"locklist size: "<<this->locks.size()<<endl;
+        this->resize_lock.unlock();
+
+        //cout<<"Resized to "<<this->N<<endl;
     }
 
 
 
     void acquire(int x)
     {
+        //cout<<"acquire lockindex1: "<<hash1(x)<<" lockindex2: "<<this->N+hash2(x)<<" locksize: "<<this->locks.size()<<endl;
         this->resize_lock.lock_shared();
         this->locks[hash1(x)].lock();
         this->locks[this->N + hash2(x)].lock();
@@ -408,6 +440,7 @@ public:
 
     void release(int x)
     {
+        //cout<<"release lockindex1: "<<hash1(x)<<" lockindex2: "<<this->N+hash2(x)<<" locksize: "<<this->locks.size()<<endl;
         this->resize_lock.unlock_shared();
         this->locks[hash1(x)].unlock();
         this->locks[this->N + hash2(x)].unlock();

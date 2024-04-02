@@ -5,8 +5,8 @@
 #include <random>
 #include <thread>
 //#include "list.cpp"
-int VALUES = 200000;
-int OPERATIONS = 0;
+int VALUES = 10000;
+int OPERATIONS = 500000;
 int THREADS = 8;
 int profile(List<int>* list, int operations);
 int randomizer(int max);
@@ -19,11 +19,11 @@ int main()
     cout<<"Value limit: "<<VALUES<<"\n";
     cout<<"Operations: "<<OPERATIONS<<"\n";
 
-    // SequentialList *seqList = new SequentialList();
-    // //cout<<"SequentialList\n";
-    // seqList->populate(VALUES);
-    // int s_time = profile(seqList, OPERATIONS);
-    // cout<<"Sequential Time: "<<s_time<<endl;
+    SequentialList *seqList = new SequentialList();
+    //cout<<"SequentialList\n";
+    seqList->populate(VALUES);
+    int s_time = profile(seqList, OPERATIONS);
+    cout<<"Sequential Time: "<<s_time<<endl;
 
     ParallelList *paraList = new ParallelList();
     //cout<<"ParallelList\n";
