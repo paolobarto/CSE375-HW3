@@ -1,6 +1,7 @@
 #include <iostream>
 #include "list-sequential.cpp"
 #include "list-parallel.cpp"
+#include "list-transactional.cpp"
 #include <chrono>
 #include <random>
 #include <thread>
@@ -19,36 +20,44 @@ int main()
     cout<<"Value limit: "<<VALUES<<"\n";
     cout<<"Operations: "<<OPERATIONS<<"\n";
 
-    SequentialList *seqList = new SequentialList();
-    //cout<<"SequentialList\n";
-    seqList->populate(VALUES);
-    cout<<"Sequential populated with "<<seqList->size()<<" values"<<endl;
-    int s_time = profile(seqList, OPERATIONS);
-    cout<<"Sequential Time: "<<s_time<<endl;
+    // SequentialList *seqList = new SequentialList();
+    // //cout<<"SequentialList\n";
+    // seqList->populate(VALUES);
+    // cout<<"Sequential populated with "<<seqList->size()<<" values"<<endl;
+    // int s_time = profile(seqList, OPERATIONS);
+    // cout<<"Sequential Time: "<<s_time<<endl;
 
-    ParallelList *paraList = new ParallelList();
-    cout<<"ParallelList\n";
-    //paraList->populate(VALUES);
+    // ParallelList *paraList = new ParallelList();
+    // cout<<"ParallelList\n";
+    // //paraList->populate(VALUES);
 
-    paraList->populate_parallel(VALUES, THREADS);
-    cout<<"Populated with "<<paraList->size()<<" values"<<endl;
-    std::vector<std::thread> threads;
-    std::atomic<int> max_time(0); 
+    // paraList->populate_parallel(VALUES, THREADS);
+    // cout<<"Populated with "<<paraList->size()<<" values"<<endl;
+    // std::vector<std::thread> threads;
+    // std::atomic<int> max_time(0); 
 
-    for(int i = 0; i < THREADS; i++)
-        threads.emplace_back(std::thread([&](){
-            int time = profile(paraList, OPERATIONS/THREADS);
-            //paraList->populate(VALUES);
-            int curr_max = max_time.load();
-            while (time > curr_max && !max_time.compare_exchange_weak(curr_max, time))
-            {
-            }
-        }));
+
+    // for(int i = 0; i < THREADS; i++)
+    //     threads.emplace_back(std::thread([&](){
+    //         int time = profile(paraList, OPERATIONS/THREADS);
+    //         //paraList->populate(VALUES);
+    //         int curr_max = max_time.load();
+    //         while (time > curr_max && !max_time.compare_exchange_weak(curr_max, time))
+    //         {
+    //         }
+    //     }));
     
-    for (auto& thread : threads)
-        thread.join();
+    // for (auto& thread : threads)
+    //     thread.join();
+    // cout<<"Parallel time: "<<max_time<<"\n";
 
-    cout<<"Parallel time: "<<max_time<<"\n";
+    TransactionalList *transList = new TransactionalList();
+    transList->populate(VALUES);
+    cout <<"Transactional populated with "<<transList->size()<<" values"<<endl;
+    int t_time = profile(transList, OPERATIONS);
+    cout<<"Transactional time"<< t_time<<endl;
+
+
 
     return 0;
 }
