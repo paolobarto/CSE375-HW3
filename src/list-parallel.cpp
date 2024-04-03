@@ -33,16 +33,20 @@ public:
 
     bool add(int x) override
     {
-       // cout<<"Adding "<<x<<" Thread Id: "<<std::this_thread::get_id()<<endl;
+       //cout<<"Adding "<<x<<" Thread Id: "<<std::this_thread::get_id()<<endl;
+       //print();
         int y = 0;
         // Normally the hash function generates the hash then outside of the function we reference it. But we dont do that here
         int index1 = hash1(x);
         int index2 = hash2(x);
         int i = -1, h = -1;
         bool must_resize = false;
-        if(contains(x))
+        // if(contains(x))
+        //     return false;
+        if(add_contains(x))
             return false;
-        acquire(x);
+        // cout<<"Value does not exist"<<endl;
+        //acquire(x);
         std::vector<int> table1List = this->table[0][index1];
         std::vector<int> table2List = this->table[1][index2];
         // output table1
@@ -54,12 +58,12 @@ public:
         for(int i = 0; i < table2List.size(); i++)
            if(table2List[i] != 0)
                table2Size++;
-        //cout<<"Table1 size: "<<table1Size<<endl;
-        //cout<<"Table2 size: "<<table2Size<<endl;
+        // cout<<"Table1 size: "<<table1Size<<endl;
+        // cout<<"Table2 size: "<<table2Size<<endl;
         if(table1Size < THRESHOLD){
             table1List[table1Size] = x;
             this->table[0][index1] = table1List;
-            //cout<<"Added to list 1 below threshold"<<endl;
+            // cout<<"Added to list 1 below threshold"<<endl;
             release(x);
              //print();
             return true;
@@ -108,6 +112,29 @@ public:
             resize();
         }
         return true;
+    }
+
+    bool add_contains(int x){
+        acquire(x);
+        
+        //print();
+        //cout<<"hash1: "<<hash1(x)<<endl;
+        std::vector<int> table1List = this->table[0][hash1(x)];
+        //cout<<"this"<<endl;
+        if(contains(table1List, x))
+        {
+            release(x);
+            return true;
+        }
+        std::vector<int> table2List = this->table[1][hash2(x)];
+        if(contains(table2List, x))
+        {
+            release(x);
+            return true;
+        }
+        // cout<<" x: "<<x<<" does not exist in table"<<endl;
+        //I inentionally do not release the locks
+        return false;
     }
 
     bool relocate(int i, int hi) {
@@ -293,7 +320,7 @@ public:
         return false;
     }
 
-    bool contains(vector<int> tableIndex,int value)
+    bool contains(vector<int> tableIndex, int value)
     {
         for(int i = 0; i < PROBE_SIZE; i++)
         {
@@ -405,9 +432,6 @@ public:
         }
 
 
-        
-
-
 
         // Deallocate memory for this->table if necessary
         // (Assuming this->table was previously dynamically allocated)
@@ -440,7 +464,7 @@ public:
 
     void acquire(int x)
     {
-        //cout<<"acquire lockindex1: "<<hash1(x)<<" lockindex2: "<<this->N+hash2(x)<<" locksize: "<<this->locks.size()<<endl;
+        // cout<<"acquire lockindex1: "<<hash1(x)<<" lockindex2: "<<this->N+hash2(x)<<" locksize: "<<this->locks.size()<<endl;
         this->resize_lock.lock_shared();
         this->locks[hash1(x)].lock();
         this->locks[this->N + hash2(x)].lock();
@@ -448,7 +472,7 @@ public:
 
     void release(int x)
     {
-        //cout<<"release lockindex1: "<<hash1(x)<<" lockindex2: "<<this->N+hash2(x)<<" locksize: "<<this->locks.size()<<endl;
+        // cout<<"release lockindex1: "<<hash1(x)<<" lockindex2: "<<this->N+hash2(x)<<" locksize: "<<this->locks.size()<<endl;
         this->resize_lock.unlock_shared();
         this->locks[hash1(x)].unlock();
         this->locks[this->N + hash2(x)].unlock();

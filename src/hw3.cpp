@@ -6,7 +6,7 @@
 #include <random>
 #include <thread>
 //#include "list.cpp"
-int VALUES = 10000;
+int VALUES = 100000;
 int OPERATIONS = 500000;
 int THREADS = 8;
 int profile(List<int>* list, int operations);

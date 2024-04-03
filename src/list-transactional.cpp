@@ -152,6 +152,8 @@ class TransactionalList: public List<int>
                 //vector<vector<int>>* new_table = new vector<vector<int>>(2, vector<int>(2*this->N));
                 int** new_table = new int*[2];
                 try{
+                    if(this->N<0)
+                        return;
                     new_table[0] = new int[2*this->N];
                     new_table[1] = new int[2*this->N];
                 }
