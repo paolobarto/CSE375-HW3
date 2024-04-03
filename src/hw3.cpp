@@ -11,11 +11,11 @@ int randomizer(int max);
 
 int main()
 {
-    int values = 1000;
-    int operations = 1000;
+    int values = 10000;
+    int operations = 100000;
     int threadCount = 2;
     // include comparison on normal vector
-    while (operations < 500000)
+    while (operations <= 500000)
     {
         while (values < 10000000)
         {
@@ -29,15 +29,16 @@ int main()
             int s_time = profile(seqList, operations, values);
             cout << "Sequential Time: " << s_time << endl;
 
-            // paraList->populate(values);
 
-            while (threadCount < 24)
+            while (threadCount <= 32)
             {
                 cout << "Threads: " << threadCount << endl;
                 ParallelList *paraList = new ParallelList();
                 cout << "ParallelList\n";
-                paraList->populate_parallel(values, threadCount);
+                //paraList->populate_parallel(values, threadCount);
+                paraList->populate(values);
                 cout << "Populated with " << paraList->size() << " values" << endl;
+
                 std::vector<std::thread> threads;
                 std::atomic<int> max_time(0);
                 for (int i = 0; i < threadCount; i++)
@@ -59,7 +60,7 @@ int main()
             values = values * 10;
         }
         values = 100000;
-        operations = operations * 10;
+        operations = operations += 100000;
     }
 
     // TransactionalList *transList = new TransactionalList();
